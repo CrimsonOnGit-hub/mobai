@@ -65,7 +65,7 @@ namespace MobAI {
     // ---------------------------------------------------------------
 
     // Real agent API uses global direction constants (FORWARD, BACK, LEFT,
-    // RIGHT, UP, DOWN) rather than an enum — see
+    // RIGHT, UP, DOWN) of type SixDirection — see
     // https://minecraft.makecode.com/reference/agent
     function toAgentDirection(dir: ScanDirection): SixDirection {
         switch (dir) {
@@ -217,6 +217,16 @@ namespace MobAI {
     let lastPathfindFailed = false;
     const onPathfoundHandlers: { [blockId: string]: (() => void)[] } = {};
 
+    /** True if `blockId` is visible in any of the six directions from here. */
+    function scanAllDirections(blockId: string): boolean {
+        return bridgeInspect(ScanDirection.Front) === blockId
+            || bridgeInspect(ScanDirection.Behind) === blockId
+            || bridgeInspect(ScanDirection.Left) === blockId
+            || bridgeInspect(ScanDirection.Right) === blockId
+            || bridgeInspect(ScanDirection.Above) === blockId
+            || bridgeInspect(ScanDirection.Below) === blockId;
+    }
+
     /**
      * Scans outward (simple expanding search, capped by radius) until the
      * target block is found, then walks the agent to it.
@@ -236,8 +246,9 @@ namespace MobAI {
         const maxSteps = radius * 4; // generous cap; tune per world density
 
         while (steps < maxSteps && !pathfindCancelled) {
-            const seen = bridgeInspect(ScanDirection.Front);
-            if (seen === blockId) {
+            // Check EVERY direction, not just front, or the agent walks
+            // right past a target sitting to its side/above/below.
+            if (scanAllDirections(blockId)) {
                 fireOnPathfound(blockId);
                 return true;
             }
